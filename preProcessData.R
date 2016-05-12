@@ -95,22 +95,30 @@ testChunks <- list(testChunk1,testChunk2,testChunk3,
                    testChunk10,testChunk11,testChunk12,
                    testChunk13,testChunk14,testChunk15)
 
-chunkPossibleClusters <- list()
 load("clustersById.RData")
-for(chunk in testChunks){
+
+source("functions.R")
+library(snow)
+
+returnPossibleClustersTest <- function(chunk){
   chunkSrchIds <- chunk$srch_destination_id
   possibleClusters <- list()
   for(i in chunkSrchIds){
     possibleClusters <- c(possibleClusters,list(returnPossibleClusters(i,-1,clustersById)))
   }
-  chunkPossibleClusters <- c(chunkPossibleClusters,list(possibleClusters))
+  possibleClusters
 }
 
-for(i in subTrainSrchIds){
-  possibleClustersTrain <- c(possibleClustersTrain,list(returnPossibleClusters(i,-1,clustersById)))
-}
+cl <- makeCluster(8)
+
+clusterExport(cl,"returnPossibleClustersTest")
+clusterExport(cl,"clustersById")
+clusterExport(cl,"returnPossibleClusters")
+
+chunksPossibleClusters <- parLapply(cl, testChunks,function(x) returnPossibleClustersTest(x))
 
 ##Save for later use
 save(file = "bookingTrain.RData", bookingTrain)
 save(file = "test.RData", test)
 save(file = "testChunks.RData", testChunks)
+save(file = "testChunksPossibleClusters.RData",chunksPossibleClusters)
