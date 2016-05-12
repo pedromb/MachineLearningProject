@@ -74,16 +74,21 @@ returnClusters <- function(p,pClusters){
   return(fullResults)
 }
 
-returnGraph <- function(entryData, title, kaggleScore){
+returnGraph <- function(entryData, title, kaggleScore, score=0){
   library(ggplot2)
   g <- ggplot()
-  g <- g + geom_line(data=entryData,aes(x=lambda,y=mapTrainAll ,color="Train MAP All Clusters"))
-  g <- g + geom_line(data=entryData,aes(x=lambda,y=mapValidAll,color="Validation MAP All Clusters"))
-  g <- g + geom_line(data=entryData,aes(x=lambda,y=mapTrainSub, color="Train MAP Clusters by id"))
-  g <- g + geom_line(data=entryData,aes(x=lambda,y=mapValidSub,color="Valid MAP Clusters by id"))
+  g <- g + geom_line(data=entryData,aes(x=lambda,y=mapTrainAll,color="Train MAP@5"),size=2)
+  g <- g + geom_line(data=entryData,aes(x=lambda,y=mapValidAll,color="Validation MAP@5"),size=2)
+  g <- g + geom_line(data=entryData,aes(x=lambda,y=mapTrainSub, color="Train MAP@5 By Destination"),size=2)
+  g <- g + geom_line(data=entryData,aes(x=lambda,y=mapValidSub,color="Validation MAP@5 By Destination"),size=2)
   g <- g + xlab("Lambda") + ylab("Precision")
   g <- g + scale_color_manual("Metrics",values=c("blue","black","red","purple"))
-  g <- g + ggtitle(paste(title, " - Kaggle Public Score = ",kaggleScore,sep=""))
+  if(kaggleScore){
+    g <- g + ggtitle(paste(title, " - Validation Best Score = ", max(entryData$mapValidSub),"\n",paste("Kaggle Score = ",score,sep=""),sep=""))
+  }
+  else{
+    g <- g + ggtitle(paste(title, " - Validation Best Score = ", max(entryData$mapValidSub),sep=""))
+  }
   return(g)
 }
 
@@ -99,22 +104,50 @@ returnH2oModel <- function(trainData,x,y,a,l){
   return(model)
 }
 
-predictOnTestH2o <- function(model){
-  load("testChunks.RData")
-  for (chunk in testChunks) {
-    chunk[is.na(chunk)] <- -1
-    chunk <- as.h2o(chunk)
+predictOnTestH2o <- function(model, title){
+  ##load("testChunks.RData")
+  ##load("testChunksPossibleClusters.RData")
+  for (j in 15:length(testChunks)) {
+    cat("\nStarting chunk: ",j)
+    testChunks[j][[1]][is.na(testChunks[j][[1]])] <- -1
+    chunk <- as.h2o(testChunks[j][[1]])
     probs <- as.data.frame(predict(model, chunk))
-    chunk <-  as.data.frame(chunk)
-    chunkSrchIds <- chunk$srch_destination_id
     preds <- list()
     for(i in 1:nrow(probs)){
       predictions <- order(as.numeric(probs[i,2:101]))-1
       preds <- c(preds, list(predictions))
     }
-    clustersResult <- returnClusters(preds,possibleClustersTrain)
-    results[i,]$mapTrainSub <- mapk(5,subTrainClusters,clustersResult)
-    cat("\nFinished model: ", i)
+    clustersResult <- returnClusters(preds,chunksPossibleClusters[[j]])
+    save(file=paste(title,j,".RData",sep=""),clustersResult)    
+    cat("\nFinished chunk: ", j)
   }
+}
+
+returnDfCluster <- function (x){
+  data.frame(hotel_cluster=paste(x,collapse =" "), stringsAsFactors = F)    
+}
+
+getTestResults <- function(title){
+  library(snow)
+  chunksPred <- c(paste(title,1,".RData",sep=""),paste(title,2,".RData",sep=""),paste(title,3,".RData",sep=""),
+                  paste(title,4,".RData",sep=""),paste(title,5,".RData",sep=""),paste(title,6,".RData",sep=""),
+                  paste(title,7,".RData",sep=""),paste(title,8,".RData",sep=""),paste(title,9,".RData",sep=""),
+                  paste(title,10,".RData",sep=""),paste(title,11,".RData",sep=""),paste(title,12,".RData",sep=""),
+                  paste(title,13,".RData",sep=""),paste(title,14,".RData",sep=""),paste(title,15,".RData",sep=""))
+  results <- data.frame(id=seq(from = 0, to = 2528242, by = 1))
+  totalClusters <- data.frame(hotel_cluster=character(0))
+  cl <- makeCluster(8)
+  clusterExport(cl, "returnDfCluster")
+  for(i in chunksPred){
+    cat("\nStarting chunk: ", i)
+    load(i)
+    clusters <- do.call(rbind, parLapply(cl,clustersResult, function(x) returnDfCluster(x)))
+    totalClusters <- rbind(totalClusters,clusters)
+    cat("\nTotal rows: ",nrow(totalClusters))
+    cat("\nFinished chunk: ", i)
+  }
+  stopCluster(cl)
+  submission <- cbind(results, totalClusters)
+  submission
 }
 

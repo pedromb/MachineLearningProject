@@ -8,7 +8,7 @@ h2o.removeAll()
 ##If you try to run all at once you probably won't have enough memory
 ##source("preProcessData.R")
 ##source("generateClustersSplit.R")
-##source("functions.R")
+source("functions.R")
 
 load("bookingTrain.RData")
 load("clustersById.RData")
@@ -69,7 +69,6 @@ subTrainClusters <- subTrainDf$hotel_cluster
 subTrainSrchIds <- subTrainDf$srch_destination_id
 subTrain$hotel_cluster <- NULL
 
-
 ##Predicts on all clusters for each model for train and valid
 modelsTrainPredictions <- list()
 modelsValidPredictions <- list()
@@ -90,7 +89,6 @@ for(modelIndex in 1:length(modelsList)){
   modelsValidPredictions <- c(modelsValidPredictions,list(predsValid))
 }
 
-
 ##Gets the map (mean average precision) for each model when predicting on all clusters
 results$mapTrainAll <- 0
 results$mapValidAll <- 0
@@ -103,7 +101,7 @@ for(i in 1:length(modelsValidPredictions)) {
   cat("\nFinished model: ", i)
 }
 
-##Trys to do better by predicting on clusters by srch_destination_id
+##Tries to do better by predicting on clusters by srch_destination_id
 results$mapTrainSub <- 0
 results$mapValidSub <- 0
 possibleClustersTrain <- list()
@@ -125,7 +123,10 @@ for(i in 1:length(modelsValidPredictions)) {
   cat("\nFinished model: ", i)
 }
 
-##Trains best model for Ridge, Lasso and Elastic Net with all sample to submit
+##Save results
+##write.csv(results, "results.csv", row.names=F, quote=F)
+
+##Trains best model for Ridge, Lasso and Elastic Net to submit
 newSplit <- h2o.splitFrame(train, ratios=.1,seed=-1)
 trainData <- newSplit[1][[1]]
 ##Ridge
@@ -136,18 +137,21 @@ lassoModel <- returnH2oModel(trainData,x,y,1,0.0005)
 elasticModel <- returnH2oModel(trainData,x,y,0.5,0.0005)
 
 ##Save models
-h2o.saveModel(ridgeModel, path = "h2oModels/ridgeModel")
-h2o.saveModel(lassoModel, path = "h2oModels/lassoModel")
-h2o.saveModel(elasticModel, path = "h2oModels/elasticModel")
+#h2o.saveModel(ridgeModel, path = "h2oModels/ridgeModel")
+#h2o.saveModel(lassoModel, path = "h2oModels/lassoModel")
+#h2o.saveModel(elasticModel, path = "h2oModels/elasticModel")
 
-#####Generate graphs
-splitResults <- split(results, results$alpha)
-##Ridge Regresion
-ridge <- splitResults[[1]]
-gridge <- returnGraph(ridge,"Ridge Regression",0)
-##Lasso
-lasso <- splitResults[[3]]
-glasso <- returnGraph(lasso,"LASSO",0)
-##Elastic Net
-elastic <- splitResults[[2]]
-gelastic <- returnGraph(elastic,"Elastic Net",0)
+ridgeModel <- h2o.loadModel("h2oModels/ridgeModel/GLM_model_R_1462750215529_1")
+predictOnTestH2o(ridgeModel,"ridgePred")
+
+lassoModel <- h2o.loadModel("h2oModels/lassoModel/GLM_model_R_1462750215529_2")
+predictOnTestH2o(lassoModel,"lassoPred")
+
+elasticModel <- h2o.loadModel("h2oModels/elasticModel/GLM_model_R_1462750215529_3")
+predictOnTestH2o(elasticModel,"elasticPred")
+
+ridgeSubmission <- getTestResults("ridgePred")
+lassoSubmission <- getTestResults("lassoPred")
+elasticSubmission <- getTestResults("elasticPred")
+write.csv(elasticSubmission,"submissionElastic.csv", row.names=F, quote=F)
+
