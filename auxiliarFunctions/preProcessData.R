@@ -73,27 +73,27 @@ test$srch_co <- NULL
 
 test$id <- NULL
 
-testChunk1 <- test[1:170000]
-testChunk2 <- test[170001:340000]
-testChunk3 <- test[340001:510000]
-testChunk4 <- test[510001:680000]
-testChunk5 <- test[680001:850000]
-testChunk6 <- test[850001:1020000]
-testChunk7 <- test[1020001:1190000]
-testChunk8 <- test[1190001:1360000]
-testChunk9 <- test[1360001:1530000]
-testChunk10 <- test[1530001:1700000]
-testChunk11 <- test[1700001:1870000]
-testChunk12 <- test[1870001:2040000]
-testChunk13 <- test[2040001:2210000]
-testChunk14 <- test[2210001:2380000]
-testChunk15 <- test[2380001:nrow(test)]
+newTestChunk1 <- newTest[1:170000]
+newTestChunk2 <- newTest[170001:340000]
+newTestChunk3 <- newTest[340001:510000]
+newTestChunk4 <- newTest[510001:680000]
+newTestChunk5 <- newTest[680001:850000]
+newTestChunk6 <- newTest[850001:1020000]
+newTestChunk7 <- newTest[1020001:1190000]
+newTestChunk8 <- newTest[1190001:1360000]
+newTestChunk9 <- newTest[1360001:1530000]
+newTestChunk10 <- newTest[1530001:1700000]
+newTestChunk11 <- newTest[1700001:1870000]
+newTestChunk12 <- newTest[1870001:2040000]
+newTestChunk13 <- newTest[2040001:2210000]
+newTestChunk14 <- newTest[2210001:2380000]
+newTestChunk15 <- newTest[2380001:nrow(newTest)]
 
-testChunks <- list(testChunk1,testChunk2,testChunk3,
-                   testChunk4,testChunk5,testChunk6,
-                   testChunk7,testChunk8,testChunk9,
-                   testChunk10,testChunk11,testChunk12,
-                   testChunk13,testChunk14,testChunk15)
+newTestChunks <- list(newTestChunk1,newTestChunk2,newTestChunk3,
+                   newTestChunk4,newTestChunk5,newTestChunk6,
+                   newTestChunk7,newTestChunk8,newTestChunk9,
+                   newTestChunk10,newTestChunk11,newTestChunk12,
+                   newTestChunk13,newTestChunk14,newTestChunk15)
 
 load("clustersById.RData")
 
